@@ -1,7 +1,15 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["pytest>=8.0", "click>=8.1", "requests>=2.31", "pycryptodome>=3.20"]
+# dependencies = [
+#     "pytest==9.1.1",
+#     "click==8.5.0",
+#     "requests==2.34.2",
+#     "pycryptodome==4.2.0",
+# ]
+#
+# [tool.uv]
+# exclude-newer = "2026-10-27T00:00:00Z"
 # ///
 """Unit tests for airdrops: the airdrop address, RPC resolution and the on-chain read. No network."""
 

@@ -1,7 +1,15 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["click>=8.1", "requests>=2.31", "pycryptodome>=3.20", "rich>=13"]
+# dependencies = [
+#     "click==8.5.0",
+#     "requests==2.34.2",
+#     "pycryptodome==4.2.0",
+#     "rich==15.0.0",
+# ]
+#
+# [tool.uv]
+# exclude-newer = "2026-10-27T00:00:00Z"
 # ///
 """Merkl CLI: read incentive campaigns from Merkl's public v4 API.
 

@@ -23,16 +23,13 @@ Read-only access to Merkl campaigns through `https://api.merkl.xyz/v4`.
 
 ## How to invoke
 
-Invoke it as **`merkl`**, on `$PATH` through a symlink in `~/.local/bin` onto
-this repo's `bin/merkl`, so a `git pull` or an uncommitted edit takes effect at
-once. It is a PEP 723 `uv` script; dependencies resolve on first run. If `merkl`
-is missing, run `<skill-dir>/bin/merkl` or link it:
+Invoke it as **`merkl`**, on `$PATH` through `claudine/scripts/link_clis.py`,
+which links this repo's `bin/merkl` into `~/.local/bin`, so a `git pull` or an
+uncommitted edit takes effect at once. It is a PEP 723 `uv` script;
+dependencies resolve on first run. If `merkl` is missing, run
+`<skill-dir>/bin/merkl`.
 
-```bash
-ln -sfn <skill-dir>/bin/merkl ~/.local/bin/merkl
-```
-
-## Configuration
+## Authentication
 
 Listing campaigns needs nothing: Merkl serves every public campaign without a
 key. `--airdrops` reads `~/.config/merkl-cli/config.json`:
