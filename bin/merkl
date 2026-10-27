@@ -1,15 +1,1 @@
-#!/usr/bin/env bash
-# Launcher: always run the current checkout's merkl_cli.py via uv (PEP 723 deps
-# resolve inline on first run). Symlink this onto $PATH so `git pull` / edits
-# take effect immediately with nothing to reinstall:
-#   ln -sfn <skill-dir>/bin/merkl ~/.local/bin/merkl
-# Resolve through symlinks so $0 being a symlink (in ~/.local/bin) still finds
-# the real script beside this launcher.
-src="${BASH_SOURCE[0]}"
-while [ -h "$src" ]; do
-  dir="$(cd -P "$(dirname "$src")" && pwd)"
-  src="$(readlink "$src")"
-  [[ $src != /* ]] && src="$dir/$src"
-done
-dir="$(cd -P "$(dirname "$src")" && pwd)"
-exec uv run --script "$dir/../merkl_cli.py" "$@"
+../merkl_cli.py

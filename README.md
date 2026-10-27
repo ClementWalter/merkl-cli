@@ -1,5 +1,7 @@
 # merkl-cli
 
+**Visibility: public.**
+
 Read [Merkl](https://merkl.xyz) incentive campaigns from the terminal: who
 created them, what they reward, their budgets, APR targets, windows, scoring
 progress, overrides and cancellations. Ships one command, `merkl`. Read-only,
