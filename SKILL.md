@@ -55,6 +55,10 @@ key. `--airdrops` reads `~/.config/merkl-cli/config.json`:
   sent as `X-API-Key`. Without it the budget check compares each airdrop with
   its whole budget and says so on stderr.
 - A value starting with `op://` is read with `op read` (1Password CLI).
+- Without a config file, `$MERKL_AIRDROP_TYPES` (comma-separated types) and
+  `$MERKL_AIRDROP_FACTORIES` (`<chain-id>:<factory-address>`, comma-separated)
+  stand in for `airdrops`. The Claude Desktop extension fills them, with
+  `$ETH_RPC_URL` and `$MERKL_API_KEY`, from its settings.
 
 ## Output conventions
 

@@ -395,8 +395,9 @@ def attach_airdrops(services: Services, records: list[dict[str, Any]]) -> None:
     api_key = services.api_key() if deployed else None
     if deployed and api_key is None:
         log.warning(
-            "no Merkl API key: each airdrop is checked against its whole budget; set MERKL_API_KEY or "
-            "merkl_api_key in %s to net out what Merkl hands back to the creator",
+            "no Merkl API key: each airdrop is checked against its whole budget; fill 'Merkl API key' in %s, "
+            "set MERKL_API_KEY or merkl_api_key in %s to net out what Merkl hands back to the creator",
+            airdrops.SETTINGS_HINT,
             airdrops.CONFIG_PATH,
         )
     with ThreadPoolExecutor(RESOLVE_WORKERS) as pool:

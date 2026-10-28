@@ -1,0 +1,44 @@
+{
+  "display_name": "Merkl",
+  "description": "Read Merkl incentive campaigns, their budgets, windows and scoring, from Claude.",
+  "long_description": "Reads Merkl's public campaign data: the campaigns a wallet created, the campaigns on a token, their budgets, APR targets, windows, scoring progress and cancellations. Read-only: it never signs or sends anything.\n\nSetup: none. Ask Claude, for example: \"list the live Merkl campaigns created by 0x…\" or \"show Merkl campaign 0x…\".\n\nOptional, to check whether a campaign paid through a confidential airdrop was really funded (\"was this campaign paid?\"), fill these settings (Claude Desktop → Settings → Extensions → Merkl → Configure):\n1. Ethereum RPC URL: an archive-capable RPC endpoint, such as an Alchemy or Infura URL with its key. Public RPCs refuse the history reads this needs.\n2. Airdrop campaign types and Airdrop factories: ask your team for the values.\n3. Merkl API key (optional): the campaign creator's key, to net out what Merkl hands back to the creator.",
+  "platforms": ["darwin", "linux"],
+  "env": {
+    "ETH_RPC_URL": "${user_config.rpc_url}",
+    "MERKL_API_KEY": "${user_config.merkl_api_key}",
+    "MERKL_AIRDROP_TYPES": "${user_config.airdrop_types}",
+    "MERKL_AIRDROP_FACTORIES": "${user_config.airdrop_factories}"
+  },
+  "user_config": {
+    "rpc_url": {
+      "type": "string",
+      "title": "Ethereum RPC URL",
+      "description": "Only for checking airdrops. An RPC endpoint that serves eth_getLogs history, e.g. from Alchemy or Infura.",
+      "sensitive": true,
+      "required": false,
+      "default": ""
+    },
+    "airdrop_types": {
+      "type": "string",
+      "title": "Airdrop campaign types",
+      "description": "Only for checking airdrops. The Merkl campaign types paid through a confidential airdrop, comma-separated.",
+      "required": false,
+      "default": ""
+    },
+    "airdrop_factories": {
+      "type": "string",
+      "title": "Airdrop factories",
+      "description": "Only for checking airdrops. <chain-id>:<factory-address>, comma-separated, e.g. 1:0x….",
+      "required": false,
+      "default": ""
+    },
+    "merkl_api_key": {
+      "type": "string",
+      "title": "Merkl API key",
+      "description": "Optional. The campaign creator's Merkl API key.",
+      "sensitive": true,
+      "required": false,
+      "default": ""
+    }
+  }
+}

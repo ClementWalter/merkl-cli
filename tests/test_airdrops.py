@@ -32,6 +32,7 @@ from airdrops import (
     expected_funding,
     predict_airdrop,
     read_airdrop,
+    load_airdrop_config,
     resolve_api_key,
     resolve_rpc,
     selector,
@@ -190,6 +191,58 @@ def test_resolve_api_key_then_reads_the_config(tmp_path, monkeypatch):
 def test_resolve_api_key_is_none_without_one(tmp_path, monkeypatch):
     monkeypatch.setattr(airdrops, "CONFIG_PATH", tmp_path / "absent.json")
     assert resolve_api_key({}) is None
+
+
+@pytest.mark.parametrize("value", ["", "  ", "${user_config.rpc_url}"])
+def test_resolve_rpc_skips_an_unfilled_setting(tmp_path, monkeypatch, value):
+    config = tmp_path / "config.json"
+    config.write_text(json.dumps({"rpc": {"1": "https://config"}}))
+    monkeypatch.setattr(airdrops, "CONFIG_PATH", config)
+    assert resolve_rpc(1, None, {"ETH_RPC_URL": value}) == "https://config"
+
+
+def test_resolve_rpc_without_any_names_the_extension_setting(tmp_path, monkeypatch):
+    monkeypatch.setattr(airdrops, "CONFIG_PATH", tmp_path / "absent.json")
+    with pytest.raises(click.UsageError, match="'Ethereum RPC URL' in the Merkl extension's settings"):
+        resolve_rpc(1, None, {})
+
+
+def test_resolve_api_key_skips_an_unfilled_setting(tmp_path, monkeypatch):
+    monkeypatch.setattr(airdrops, "CONFIG_PATH", tmp_path / "absent.json")
+    assert resolve_api_key({"MERKL_API_KEY": "${user_config.merkl_api_key}"}) is None
+
+
+AIRDROP_ENV = {"MERKL_AIRDROP_TYPES": "TYPE_A, TYPE_B", "MERKL_AIRDROP_FACTORIES": f"1:{FACTORY}, 8453:{FACTORY}"}
+
+
+def test_load_airdrop_config_reads_types_from_the_environment(tmp_path, monkeypatch):
+    monkeypatch.setattr(airdrops, "CONFIG_PATH", tmp_path / "absent.json")
+    assert load_airdrop_config(AIRDROP_ENV).campaign_types == {"TYPE_A", "TYPE_B"}
+
+
+def test_load_airdrop_config_reads_factories_from_the_environment(tmp_path, monkeypatch):
+    monkeypatch.setattr(airdrops, "CONFIG_PATH", tmp_path / "absent.json")
+    assert load_airdrop_config(AIRDROP_ENV).factories == {1: checksum(FACTORY), 8453: checksum(FACTORY)}
+
+
+def test_load_airdrop_config_then_reads_the_config(tmp_path, monkeypatch):
+    config = tmp_path / "config.json"
+    config.write_text(json.dumps({"airdrops": {"campaign_types": ["TYPE_C"], "factories": {"1": FACTORY}}}))
+    monkeypatch.setattr(airdrops, "CONFIG_PATH", config)
+    assert load_airdrop_config({"MERKL_AIRDROP_TYPES": "${user_config.airdrop_types}"}).campaign_types == {"TYPE_C"}
+
+
+def test_load_airdrop_config_without_any_names_the_extension_settings(tmp_path, monkeypatch):
+    monkeypatch.setattr(airdrops, "CONFIG_PATH", tmp_path / "absent.json")
+    with pytest.raises(click.UsageError, match="'Airdrop campaign types' and 'Airdrop factories'"):
+        load_airdrop_config({})
+
+
+@pytest.mark.parametrize("value", ["0xabc", "1:0xabc,8453"])
+def test_load_airdrop_config_rejects_malformed_factories(tmp_path, monkeypatch, value):
+    monkeypatch.setattr(airdrops, "CONFIG_PATH", tmp_path / "absent.json")
+    with pytest.raises(click.UsageError, match="<chain-id>:<factory-address>"):
+        load_airdrop_config({"MERKL_AIRDROP_TYPES": "TYPE_A", "MERKL_AIRDROP_FACTORIES": value})
 
 
 if __name__ == "__main__":

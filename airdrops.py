@@ -5,7 +5,8 @@ confidential (ERC-7984) Merkle airdrop instead, so Merkl's data says nothing abo
 payment. Holders are paid by a TokenOps `MerkleConfidentialAirdrop` clone whose address
 Merkl itself derives from a reward-airdrop factory, the campaign's creator and the
 campaign id, and binds its encrypted rewards to. Which campaign types settle this way,
-and through which factory on each chain, is configuration (`airdrops` in the config file). That clone is what this module reads: whether it exists, its
+and through which factory on each chain, is configuration (`airdrops` in the config file, or
+`$MERKL_AIRDROP_TYPES` and `$MERKL_AIRDROP_FACTORIES`). That clone is what this module reads: whether it exists, its
 Merkle root, how much of the real token was wrapped into it (plaintext `Wrap` events
 on its confidential token), how many roots it has had and how many claims it served.
 """
@@ -14,10 +15,11 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 import subprocess
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from decimal import Decimal
@@ -37,6 +39,8 @@ TIMEOUT_SECONDS = 20
 # Airdrops read at once: each is about ten RPC calls.
 READ_WORKERS = 4
 CONFIG_PATH = Path.home() / ".config" / "merkl-cli" / "config.json"
+# Where a Claude Desktop user sets the values that the config file holds in a terminal.
+SETTINGS_HINT = "the Merkl extension's settings (Claude Desktop → Settings → Extensions → Merkl)"
 
 
 def keccak256(data: bytes) -> bytes:
@@ -86,6 +90,12 @@ def checksum(address: str) -> str:
     return "0x" + "".join(c.upper() if int(digest[i], 16) >= 8 else c for i, c in enumerate(lower))
 
 
+def setting(env: Mapping[str, str], name: str) -> str | None:
+    """`env[name]` when set; Claude Desktop passes an unfilled optional setting as its raw `${user_config.…}` template."""
+    value = (env.get(name) or "").strip()
+    return None if not value or value.startswith("${") else value
+
+
 def configured(*keys: str) -> str | None:
     """The value at `keys` in the config file, if the file and the value exist."""
     if not CONFIG_PATH.is_file():
@@ -112,12 +122,13 @@ def resolve_rpc(chain_id: int, flag: str | None, env: dict[str, str]) -> str:
     """The RPC URL for `chain_id`: `--rpc-url`, then `$ETH_RPC_URL`, then the config file."""
     if flag:
         return flag
-    if env.get("ETH_RPC_URL"):
-        return env["ETH_RPC_URL"]
+    if setting(env, "ETH_RPC_URL"):
+        return setting(env, "ETH_RPC_URL")
     value = configured("rpc", str(chain_id))
     if value is None:
         raise click.UsageError(
-            f"--airdrops reads chain {chain_id} and needs an RPC: pass --rpc-url, set ETH_RPC_URL, or add\n"
+            f"--airdrops reads chain {chain_id} and needs an RPC: fill 'Ethereum RPC URL' in {SETTINGS_HINT}, "
+            "pass --rpc-url, set ETH_RPC_URL, or add\n"
             f'  {{"rpc": {{"{chain_id}": "<url or op://vault/item/field>"}}}}  to {CONFIG_PATH}'
         )
     return reveal(value)
@@ -134,13 +145,27 @@ class AirdropConfig:
 AIRDROP_CONFIG_EXAMPLE = '{"airdrops": {"campaign_types": ["<MERKL_TYPE>"], "factories": {"1": "<factory-address>"}}}'
 
 
-def load_airdrop_config() -> AirdropConfig:
-    """The `airdrops` section of the config file; a usage error naming its shape when absent."""
-    section = json.loads(CONFIG_PATH.read_text()).get("airdrops") if CONFIG_PATH.is_file() else None
+def parse_factories(value: str) -> dict[str, str]:
+    """`1:0xabc…,8453:0xdef…` as `{"1": "0xabc…", "8453": "0xdef…"}`."""
+    pairs = [item.split(":", 1) for item in value.split(",") if item.strip()]
+    if not pairs or any(len(pair) != 2 for pair in pairs):
+        raise click.UsageError(f"MERKL_AIRDROP_FACTORIES is {value!r}; write it as <chain-id>:<factory-address>, comma-separated")
+    return {chain.strip(): address.strip() for chain, address in pairs}
+
+
+def load_airdrop_config(env: Mapping[str, str] | None = None) -> AirdropConfig:
+    """`$MERKL_AIRDROP_TYPES` and `$MERKL_AIRDROP_FACTORIES`, else the config file's `airdrops` section."""
+    env = os.environ if env is None else env
+    types, factories = setting(env, "MERKL_AIRDROP_TYPES"), setting(env, "MERKL_AIRDROP_FACTORIES")
+    if types and factories:
+        section: Any = {"campaign_types": [t.strip() for t in types.split(",") if t.strip()], "factories": parse_factories(factories)}
+    else:
+        section = json.loads(CONFIG_PATH.read_text()).get("airdrops") if CONFIG_PATH.is_file() else None
     if not (isinstance(section, dict) and section.get("campaign_types") and section.get("factories")):
         raise click.UsageError(
-            f"--airdrops needs to know which campaigns settle through an airdrop, and its factory; add\n"
-            f"  {AIRDROP_CONFIG_EXAMPLE}  to {CONFIG_PATH}"
+            "--airdrops needs to know which campaigns settle through an airdrop, and its factory: fill "
+            f"'Airdrop campaign types' and 'Airdrop factories' in {SETTINGS_HINT}, set MERKL_AIRDROP_TYPES and "
+            f"MERKL_AIRDROP_FACTORIES, or add\n  {AIRDROP_CONFIG_EXAMPLE}  to {CONFIG_PATH}"
         )
     return AirdropConfig(
         campaign_types=frozenset(section["campaign_types"]),
@@ -150,7 +175,7 @@ def load_airdrop_config() -> AirdropConfig:
 
 def resolve_api_key(env: dict[str, str]) -> str | None:
     """The Merkl API key: `$MERKL_API_KEY`, then `merkl_api_key` in the config file; None without."""
-    value = env.get("MERKL_API_KEY") or configured("merkl_api_key")
+    value = setting(env, "MERKL_API_KEY") or configured("merkl_api_key")
     return None if value is None else reveal(value)
 
 
