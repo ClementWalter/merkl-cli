@@ -231,6 +231,12 @@ def test_client_keeps_a_repeated_campaign_once():
     assert len(client.campaigns({})) == 1
 
 
+def test_client_asks_merkl_for_the_compute_status():
+    client = MerklClient(session=StubSession(Response(200, [])))
+    client.campaigns({})
+    assert client.session.calls[0]["withComputeStatus"] == "true"
+
+
 def test_client_retries_a_rate_limit():
     client = MerklClient(session=StubSession(Response(429, {}, {"Retry-After": "1"}), Response(200, [EXAMPLE])))
     assert len(client.campaigns({})) == 1

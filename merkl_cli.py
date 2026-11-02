@@ -118,7 +118,9 @@ class MerklClient:
         """Every page of `GET /campaigns` for `params`, each campaign once."""
         seen: dict[tuple[str, int], dict[str, Any]] = {}
         for page in range(MAX_PAGES):
-            batch = self.get("campaigns", {**params, "items": PAGE_SIZE, "page": page})
+            # Merkl returns `campaignStatus` (how far it has scored) only with `withComputeStatus`.
+            query = {**params, "withComputeStatus": "true", "items": PAGE_SIZE, "page": page}
+            batch = self.get("campaigns", query)
             for campaign in batch:
                 # Pages can repeat a campaign; a campaign id is unique per distribution chain.
                 seen.setdefault((campaign["campaignId"], campaign["distributionChainId"]), campaign)
