@@ -53,8 +53,10 @@ from typing import Any
 
 import click
 import requests
+from rich.cells import cell_len
 from rich.console import Console
 from rich.table import Table
+from rich.text import Text
 
 import airdrops
 
@@ -448,6 +450,9 @@ def attach_airdrops(services: Services, records: list[dict[str, Any]]) -> None:
             )
 
 
+# Columns whose text may wrap onto several lines when the table is wider than the terminal.
+WRAPPING_COLUMNS = ("Status", "Window (UTC)", "Airdrop")
+
 STATUS_STYLES = {"live": "bold green", "soon": "cyan", "past": "dim", "invalid": "red"}
 
 
@@ -498,10 +503,8 @@ def render_pretty(records: list[dict[str, Any]], console: Console | None = None)
             title_justify="left",
             header_style="bold",
         )
-        for column in ("Status", "Budget", "APR", "Window (UTC)", "Created", "Campaign"):
-            table.add_column(column, no_wrap=True, justify="right" if column in ("Budget", "APR") else "left")
-        if settled_by_airdrop:
-            table.add_column("Airdrop", no_wrap=True)
+        columns = ["Status", "Budget", "APR", "Window (UTC)", "Created", "Campaign"] + (["Airdrop"] if settled_by_airdrop else [])
+        rows = []
         for record in sorted(group, key=lambda r: (r["start"] or "", r["created_at"] or "")):
             status = record["status"]
             label = f"[{STATUS_STYLES.get(status, '')}]{status}[/]"
@@ -517,8 +520,23 @@ def render_pretty(records: list[dict[str, Any]], console: Console | None = None)
             ]
             if settled_by_airdrop:
                 row.append(airdrop_cell(record))
+            rows.append(row)
+        for index, column in enumerate(columns):
+            # Short columns keep their full width; on a narrow terminal only the prose columns wrap.
+            wraps = column in WRAPPING_COLUMNS
+            texts = [Text.from_markup(cell).plain for cell in [column, *(row[index] for row in rows)]]
+            # A wrapping column still never splits a word, so it is at least as wide as its longest word.
+            pieces = [word for text in texts for word in text.split()] if wraps else texts
+            table.add_column(
+                column,
+                no_wrap=not wraps,
+                min_width=max(cell_len(piece) for piece in pieces),
+                justify="right" if column in ("Budget", "APR") else "left",
+            )
+        for row in rows:
             table.add_row(*row)
-        console.print(table)
+        # Below the columns' minimum width the terminal soft-wraps lines rather than Rich dropping columns.
+        console.print(table, crop=False)
         console.print()
 
 

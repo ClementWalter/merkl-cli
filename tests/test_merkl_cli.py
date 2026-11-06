@@ -417,11 +417,37 @@ def test_campaigns_status_live_leaves_out_a_rejected_campaign():
     assert json.loads(result.stdout) == []
 
 
-def pretty(records):
-    """What --pretty prints for `records`, without colour."""
+def pretty(records, width=200):
+    """What --pretty prints for `records` on a `width`-column terminal, without colour."""
     out = io.StringIO()
-    render_pretty(records, Console(file=out, width=200, color_system=None))
+    render_pretty(records, Console(file=out, width=width, color_system=None))
     return out.getvalue()
+
+
+FUNDED_DROP = {
+    "address": "0x7bF3f94fb31377D4Ba1ab3D088B9B062237D223B",
+    "deployed": True,
+    "funded_in_full": True,
+    "funded": "1000",
+    "creator_reward": "12",
+    "claims": 3,
+    "roots_set": 4,
+}
+
+
+@pytest.mark.parametrize("width", [120, 80, 60])
+def test_pretty_keeps_the_budget_whole_on_a_narrow_terminal(record, width):
+    assert "599,330 RWD" in pretty([{**record, "airdrop": FUNDED_DROP}], width)
+
+
+@pytest.mark.parametrize("width", [120, 80, 60])
+def test_pretty_keeps_the_campaign_id_whole_on_a_narrow_terminal(record, width):
+    assert "0x7c7c7c7c" in pretty([{**record, "airdrop": FUNDED_DROP}], width)
+
+
+@pytest.mark.parametrize("width", [120, 80, 60])
+def test_pretty_keeps_the_airdrop_column_on_a_narrow_terminal(record, width):
+    assert "0x7bF3…223B" in pretty([{**record, "airdrop": FUNDED_DROP}], width)
 
 
 def test_pretty_titles_each_table_with_its_target_side_and_opportunity(record):
